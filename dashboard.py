@@ -127,6 +127,64 @@ class DashboardWindow(QWidget):
         # Add everything to left layout
         left_layout.addLayout(progress_layout)
         left_layout.addWidget(continue_btn, alignment=Qt.AlignCenter)
+
+        # Lessons boxes under the Continue Learning button
+        lessons_layout = QHBoxLayout()
+        # Increase spacing so boxes appear as separate entities
+        lessons_layout.setSpacing(36)
+        # Add outer margins around the whole lessons row for extra separation
+        lessons_layout.setContentsMargins(12, 12, 12, 12)
+        lesson_names = ["Loops", "Conditionals", "Functions", "Data Structures"]
+        for name in lesson_names:
+            # Transparent wrapper to provide outer margin (so frames don't touch or show connecting lines)
+            wrapper = QFrame()
+            wrapper.setStyleSheet("background-color: transparent;")
+            wrapper_layout = QVBoxLayout()
+            # outer margins create visible separation between lesson frames
+            wrapper_layout.setContentsMargins(10, 0, 10, 0)
+            wrapper.setLayout(wrapper_layout)
+
+            # Single frame per lesson with full border
+            lesson_frame = QFrame()
+            lesson_frame.setFixedSize(170, 70)
+            lesson_frame.setStyleSheet(
+                f"background-color: transparent;"
+                f"border-left: 2px solid {primary_text_color};"
+                f"border-top: 2px solid {primary_text_color};"
+                f"border-bottom: 2px solid {primary_text_color};"
+                f"border-right: 0px solid transparent;"
+                f"border-top-left-radius: 8px;"
+                f"border-bottom-left-radius: 8px;"
+            )
+            lf_layout = QVBoxLayout()
+            lf_layout.setContentsMargins(8, 4, 8, 4)
+            lbl = QLabel(name)
+            lbl.setAlignment(Qt.AlignCenter)
+            lbl.setStyleSheet(f"color: {primary_text_color}; font-weight: bold;")
+            lf_layout.addWidget(lbl)
+            lesson_frame.setLayout(lf_layout)
+
+            # Inner container to hold the lesson frame and a thin vertical line to 'finish' the border
+            inner = QFrame()
+            inner_layout = QHBoxLayout()
+            inner_layout.setContentsMargins(0, 0, 0, 0)
+            inner_layout.setSpacing(0)
+            # vertical line to the right of the box (2px) matching the primary color
+            vline = QFrame()
+            vline.setFixedWidth(2)
+            vline.setFixedHeight(70)
+            vline.setStyleSheet(f"background-color: {primary_text_color}; border: none; border-top-right-radius: 8px; border-bottom-right-radius: 8px;")
+
+            inner_layout.addWidget(lesson_frame)
+            inner_layout.addWidget(vline)
+            inner.setLayout(inner_layout)
+
+            wrapper_layout.addWidget(inner, alignment=Qt.AlignCenter)
+            lessons_layout.addWidget(wrapper, alignment=Qt.AlignCenter)
+
+        # Add spacing to visually separate from the button (approx same distance as circles above)
+        left_layout.addSpacing(12)
+        left_layout.addLayout(lessons_layout)
         left_layout.addStretch()  # Push everything to top
 
         # Right side - Vertical column (dark blue background) with a light-grey prompt box at the bottom
@@ -137,60 +195,16 @@ class DashboardWindow(QWidget):
         right_widget.setStyleSheet(f"background-color: {primary_text_color}; border-radius: 10px; padding: 8px;")
         right_widget.setFixedWidth(240)
 
-        right_title = QLabel("Menu")
-        right_title.setAlignment(Qt.AlignCenter)
-        # Menu title should be white to contrast with dark blue background
-        right_title.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px; padding: 6px; color: white;")
-        right_layout.addWidget(right_title)
-
-        # Add some placeholder menu items
-        menu_items = ["Profile", "Settings", "History", "Help"]
-        for item in menu_items:
-            menu_btn = QPushButton(item)
-            # Buttons on the dark blue column should use white text and subtle hover
-            menu_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: transparent;
-                    border: none;
-                    padding: 10px;
-                    text-align: left;
-                    font-size: 14px;
-                    color: white;
-                }
-                QPushButton:hover {
-                    background-color: rgba(255,255,255,0.06);
-                }
-            """)
-            right_layout.addWidget(menu_btn)
-
-        # Push the prompt box to the bottom
+        # Right column intentionally left minimal (visual accent only)
+        # You can add widgets here later if needed.
         right_layout.addStretch()
-
-        # Light grey prompt box at the bottom of the right column
-        prompt_box = QFrame()
-        prompt_box.setStyleSheet("background-color: #e6e6e6; border-radius: 8px; padding: 8px;")
-        prompt_box.setFixedHeight(120)
-        prompt_layout = QVBoxLayout()
-        prompt_box.setLayout(prompt_layout)
-
-        prompt_label = QLabel("Message")
-        prompt_label.setStyleSheet(f"color: {primary_text_color}; font-weight: bold; margin-bottom: 6px;")
-        prompt_layout.addWidget(prompt_label)
-
-        prompt_input = QTextEdit()
-        prompt_input.setPlaceholderText("Type your message here...")
-        # Ensure text entered into the prompt is dark blue to match the app text
-        prompt_input.setStyleSheet(f"background-color: #ffffff; color: {primary_text_color}; border: 1px solid #dcdcdc; border-radius: 6px;")
-        prompt_layout.addWidget(prompt_input)
-
-        right_layout.addWidget(prompt_box)
 
         # Add both sides to main layout
         main_layout.addWidget(left_widget, stretch=3)  # Left side takes more space
         main_layout.addWidget(right_widget, stretch=1)  # Right side smaller
 
         self.setLayout(main_layout)
-    
+        
     def continue_learning(self):
         print("Continue Learning clicked!")
 
