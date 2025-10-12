@@ -7,9 +7,11 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QFrame,
+    QTextEdit,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
+from lesson_window import LessonWindow
 
 
 class ProgressCircle(QWidget):
@@ -92,7 +94,7 @@ class DashboardWindow(QWidget):
             labels_layout.addWidget(label)
         progress_layout.addLayout(labels_layout)
 
-        # Continue Learning Button
+        # Continue Learning button (keeps the dashboard title)
         continue_btn = QPushButton("Continue Learning")
         continue_btn.setStyleSheet("""
             QPushButton {
@@ -111,31 +113,63 @@ class DashboardWindow(QWidget):
         """)
         continue_btn.clicked.connect(self.continue_learning)
 
-        # Add everything above to left layout
+        # Add progress section to left layout
         left_layout.addLayout(progress_layout)
-        left_layout.addWidget(continue_btn, alignment=Qt.AlignCenter)
+
+    # Keep the Continue button at its default size (do not force width)
+
+        # Create a centered container that holds the Continue button and the lesson boxes
+        center_container = QFrame()
+        center_layout = QVBoxLayout()
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.setSpacing(12)
+        center_layout.setAlignment(Qt.AlignHCenter)
+        center_container.setLayout(center_layout)
+
+        # Put the continue button centered above the lesson boxes
+        center_layout.addWidget(continue_btn, alignment=Qt.AlignHCenter)
 
         # --- Lessons boxes section ---
         lessons_layout = QHBoxLayout()
-        # Increased spacing to avoid overlap
-        lessons_layout.setSpacing(56)
-        # Larger outer margins for clearer separation
-        lessons_layout.setContentsMargins(24, 12, 24, 12)
+        # Increased spacing to avoid overlap (reduce a bit so all boxes fit)
+        lessons_layout.setSpacing(24)
+        # Remove outer margins so the entire group can be centered under the button
+        lessons_layout.setContentsMargins(0, 12, 0, 12)
 
-        # Create 4 empty boxes
-        for _ in range(4):
+        # Create 4 labelled lesson boxes (plain centered text, transparent background, semi-transparent borders)
+        lesson_titles = ["Input Validation", "Auth & Sessions", "Access Control", "Error Handling"]
+        # semi-transparent border color (rgba of primary text color)
+        semi_border = "rgba(11,61,145,0.55)"
+        for title in lesson_titles:
             box = QFrame()
-            # make boxes a bit smaller
-            box.setFixedSize(100, 50)
+            # keep boxes compact (slightly narrower so all boxes fit)
+            box.setFixedSize(90, 50)
             box.setStyleSheet(
                 f"background-color: transparent;"
-                f"border: 2px solid {primary_text_color};"
+                f"border: 2px solid {semi_border};"
                 f"border-radius: 8px;"
             )
+            b_layout = QVBoxLayout()
+            b_layout.setContentsMargins(4, 0, 4, 0)
+            b_layout.setAlignment(Qt.AlignCenter)
+
+            # Plain label (not a text box) centered inside the frame
+            lbl = QLabel(title)
+            lbl.setAlignment(Qt.AlignCenter)
+            lbl.setStyleSheet(f"color: {primary_text_color}; font-weight: 600; font-size: 13px; background: transparent;")
+            b_layout.addWidget(lbl)
+            box.setLayout(b_layout)
             lessons_layout.addWidget(box, alignment=Qt.AlignCenter)
 
-        left_layout.addSpacing(12)
-        left_layout.addLayout(lessons_layout)
+        # Wrap the lessons_layout into a frame so it can be centered as a single widget
+        lessons_frame = QFrame()
+        lessons_frame.setLayout(lessons_layout)
+        lessons_frame.setStyleSheet("background: transparent;")
+        # Let the lessons_frame size to its contents so it centers naturally under the button
+        center_layout.addWidget(lessons_frame, alignment=Qt.AlignCenter)
+
+        # Add the center container (button above boxes) into the left layout, centered
+        left_layout.addWidget(center_container, alignment=Qt.AlignHCenter)
         left_layout.addStretch()
 
         # --- Right side ---
@@ -144,7 +178,22 @@ class DashboardWindow(QWidget):
         right_widget.setLayout(right_layout)
         right_widget.setStyleSheet(f"background-color: {primary_text_color}; border-radius: 10px; padding: 8px;")
         right_widget.setFixedWidth(240)
+        # Heading at top of right column
+        right_title = QLabel("AI Chatbox")
+        right_title.setAlignment(Qt.AlignCenter)
+        right_title.setStyleSheet("color: white; font-size: 16px; font-weight: bold; margin: 6px;")
+        right_layout.addWidget(right_title)
         right_layout.addStretch()
+
+        # Interactive multi-line text area at the bottom for notes / typing
+        notes_edit = QTextEdit()
+        notes_edit.setPlaceholderText("Type your notes or chat here...")
+        notes_edit.setFixedHeight(120)
+        notes_edit.setStyleSheet(
+            "background-color: white; color: #0b3d91; border-radius: 8px; padding: 8px;"
+        )
+        # Add at the bottom (after the stretch) so it stays anchored to the bottom
+        right_layout.addWidget(notes_edit, alignment=Qt.AlignBottom)
 
         # Combine sides
         main_layout.addWidget(left_widget, stretch=3)
@@ -152,7 +201,11 @@ class DashboardWindow(QWidget):
         self.setLayout(main_layout)
 
     def continue_learning(self):
-        print("Continue Learning clicked!")
+        # Open a lesson window. Keep a reference so it isn't garbage-collected.
+        # Use the lesson title 'Input Handling' inside the lesson window
+        lesson_title = "Input Handling"
+        self.lesson_win = LessonWindow(lesson_title)
+        self.lesson_win.show()
 
 
 def main():
