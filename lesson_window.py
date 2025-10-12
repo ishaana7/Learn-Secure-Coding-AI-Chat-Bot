@@ -17,12 +17,13 @@ class LessonWindow(QWidget):
 
         heading = QLabel(title)
         heading.setAlignment(Qt.AlignCenter)
-        heading.setStyleSheet("font-size: 20px; font-weight: bold; margin: 8px;")
+        heading.setStyleSheet("font-size: 20px; font-weight: bold; margin: 8px; color: #0b3d91;")
         layout.addWidget(heading)
 
         body = QTextEdit()
         body.setReadOnly(False)
         body.setPlaceholderText("Lesson contents go here. You can type notes or experiment.")
+        body.setStyleSheet("background-color: white; color: #0b3d91; border-radius: 8px; padding: 8px;")
         layout.addWidget(body)
 
         close_btn = QPushButton("Close")
