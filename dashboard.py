@@ -4,7 +4,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from lesson_window import LessonWindow
-from gemma_client import get_response  # Import your AI function
+from ai_client import get_response, set_api_key
+
+# 👇 Set your API key once when dashboard starts
+set_api_key
 
 
 class ProgressCircle(QWidget):
