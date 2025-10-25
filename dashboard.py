@@ -204,12 +204,12 @@ class DashboardWindow(QWidget):
 
         self.chat_display.append(f"<b>You:</b> {user_text}")
         self.notes_edit.clear()
-        self.chat_display.append("<i>Gemma is thinking...</i>")
+        self.chat_display.append("<i>AI is thinking...</i>")
         QApplication.processEvents()
 
         try:
             ai_reply = get_response(user_text)
-            self.chat_display.append(f"<b>Gemma:</b> {ai_reply}\n")
+            self.chat_display.append(f"<b>AI:</b> {ai_reply}\n")
         except Exception as e:
             self.chat_display.append(f"<b>Error:</b> {e}\n")
         self.chat_display.verticalScrollBar().setValue(
