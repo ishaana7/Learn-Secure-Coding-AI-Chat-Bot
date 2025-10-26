@@ -6,9 +6,9 @@ from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from lesson_window import LessonWindow
 from ai_client import get_response, set_api_key
 
-# 👇 Set your API key once when dashboard starts
-set_api_key
-
+# Set your API key once when dashboard starts
+# Replace 'your_api_key_here' with your actual API key
+set_api_key("your_api_key_here")
 
 class ProgressCircle(QWidget):
     def __init__(self, progress=0.0):
@@ -35,7 +35,6 @@ class ProgressCircle(QWidget):
             span_angle = -int(360 * self.progress * 16)
             painter.drawArc(center.x() - radius, center.y() - radius, radius * 2, radius * 2, start_angle, span_angle)
 
-
 class DashboardWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -43,7 +42,7 @@ class DashboardWindow(QWidget):
 
     def init_ui(self):
         self.setWindowTitle("Secure Learning Chatbox - Dashboard")
-        self.setFixedSize(800, 600)
+        self.setFixedSize(1000, 600)
         self.setStyleSheet("background-color: #e6e6e6;")
 
         primary_text_color = "#0b3d91"
@@ -115,13 +114,19 @@ class DashboardWindow(QWidget):
         center_container.setLayout(center_layout)
         center_layout.addWidget(continue_btn, alignment=Qt.AlignHCenter)
 
-        # Lesson boxes
+        # Lesson boxes with lesson names
         lessons_layout = QHBoxLayout()
         lessons_layout.setSpacing(24)
         lessons_layout.setContentsMargins(0, 12, 0, 12)
         lesson_titles = ["Input Validation", "Auth & Sessions", "Access Control", "Error Handling"]
         semi_border = "rgba(11,61,145,0.55)"
         for title in lesson_titles:
+            # Create a vertical layout for each box and its label
+            box_layout = QVBoxLayout()
+            box_layout.setAlignment(Qt.AlignCenter)
+            box_layout.setSpacing(5)
+
+            # Lesson box
             box = QFrame()
             box.setFixedSize(90, 50)
             box.setStyleSheet(
@@ -137,7 +142,16 @@ class DashboardWindow(QWidget):
             lbl.setStyleSheet(f"color: {primary_text_color}; font-weight: 600; font-size: 13px; background: transparent;")
             b_layout.addWidget(lbl)
             box.setLayout(b_layout)
-            lessons_layout.addWidget(box, alignment=Qt.AlignCenter)
+            box_layout.addWidget(box, alignment=Qt.AlignCenter)
+
+            # Lesson name label
+            name_label = QLabel(title)
+            name_label.setAlignment(Qt.AlignCenter)
+            name_label.setStyleSheet(f"font-size: 10px; margin: 5px; color: {primary_text_color};")
+            box_layout.addWidget(name_label)
+
+            lessons_layout.addLayout(box_layout)
+        
         lessons_frame = QFrame()
         lessons_frame.setLayout(lessons_layout)
         lessons_frame.setStyleSheet("background: transparent;")
