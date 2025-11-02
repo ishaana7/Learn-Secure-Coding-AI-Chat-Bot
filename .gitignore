@@ -1,2 +1,5 @@
 # Exclude the file that contains sensitive environment variables
 .env
+# Python virtual environments
+venv/
+.venv/
