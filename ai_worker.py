@@ -9,18 +9,17 @@ class AISignals(QObject):
     """
     Defines the signals available from a running worker thread.
     """
-    # Emits the successful reply text (str)
-    finished = Signal(str)      
-    # Emits if the request fails (None is passed)
-    error = Signal(Optional[str]) 
+    finished = Signal(str)      # Emits the successful reply text (str)
+    
+    # FIX: Define the error signal to accept one string argument
+    error = Signal(str) 
 
 class AIWorker(QObject):
     """
     Worker for the API call, executing in a standard Python thread.
     
-    NOTE: We switched from QRunnable to QObject managing a thread 
-    to resolve potential conflicts between Qt's thread pool and 
-    the 'requests' library's underlying I/O.
+    NOTE: We use QObject managing a standard Python thread (threading.Thread) 
+    to avoid conflicts between Qt's thread pool and the 'requests' library's I/O.
     """
     def __init__(self, prompt: str, parent=None):
         super().__init__(parent)
@@ -34,7 +33,7 @@ class AIWorker(QObject):
         """
         # Create a standard Python thread to run the potentially problematic I/O
         self._thread = threading.Thread(target=self._execute_api_call)
-        self._thread.daemon = True # Allows application to exit even if thread is running
+        self._thread.daemon = True 
         self._thread.start()
 
     def _execute_api_call(self):
@@ -47,7 +46,9 @@ class AIWorker(QObject):
         if reply is not None:
             self.signals.finished.emit(reply)
         else:
-            # Emitting the error signal passes None or the error result back.
-            self.signals.error.emit(reply)
-            
-# The ai_client.py remains unchanged.
+            # FIX: Emit an empty string ("") instead of None to match the Signal(str) signature
+            self.signals.error.emit("") 
+
+# NOTE: The rest of the content from the original ai_worker.py 
+# (which includes the get_response function) is assumed to be 
+# in ai_client.py or elsewhere and doesn't need to be repeated here.
