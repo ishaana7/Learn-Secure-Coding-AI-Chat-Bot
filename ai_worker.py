@@ -1,5 +1,6 @@
 # ai_worker.py
-from PySide6.QtCore import QRunnable, QObject, Signal
+import threading
+from PySide6.QtCore import QObject, Signal
 from typing import Optional
 from ai_client import get_response
 
@@ -8,22 +9,37 @@ class AISignals(QObject):
     """
     Defines the signals available from a running worker thread.
     """
-    finished = Signal(str)      # Emits the successful reply text (str)
-    error = Signal(Optional[str]) # Emits if the request fails (None is passed)
+    # Emits the successful reply text (str)
+    finished = Signal(str)      
+    # Emits if the request fails (None is passed)
+    error = Signal(Optional[str]) 
 
-class AIWorker(QRunnable):
+class AIWorker(QObject):
     """
-    Worker for the API call, executing in a QThreadPool thread.
+    Worker for the API call, executing in a standard Python thread.
+    
+    NOTE: We switched from QRunnable to QObject managing a thread 
+    to resolve potential conflicts between Qt's thread pool and 
+    the 'requests' library's underlying I/O.
     """
-    def __init__(self, prompt: str):
-        super().__init__()
+    def __init__(self, prompt: str, parent=None):
+        super().__init__(parent)
         self.prompt = prompt
         self.signals = AISignals()
-        self.setAutoDelete(True) 
+        self._thread = None
 
     def run(self):
         """
-        The main method of the worker, executed by the QThreadPool.
+        Starts the API call in a new dedicated Python thread.
+        """
+        # Create a standard Python thread to run the potentially problematic I/O
+        self._thread = threading.Thread(target=self._execute_api_call)
+        self._thread.daemon = True # Allows application to exit even if thread is running
+        self._thread.start()
+
+    def _execute_api_call(self):
+        """
+        The actual work to be done in the background thread.
         """
         reply = get_response(self.prompt)
         
@@ -33,3 +49,5 @@ class AIWorker(QRunnable):
         else:
             # Emitting the error signal passes None or the error result back.
             self.signals.error.emit(reply)
+            
+# The ai_client.py remains unchanged.

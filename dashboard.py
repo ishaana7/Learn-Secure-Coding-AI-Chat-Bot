@@ -2,12 +2,12 @@ import threading
 from typing import Optional
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QTextEdit, QApplication
+    QFrame, QTextEdit, QApplication, QScrollBar # Added QScrollBar for explicit type
 )
 from PySide6.QtGui import QMovie, QPainter, QPen, QBrush, QColor, QTextCursor 
-from PySide6.QtCore import Qt, QEvent, QTimer, QThreadPool 
+from PySide6.QtCore import Qt, QEvent, QTimer, QThreadPool # QThreadPool is no longer used for AIWorker, but kept for context
 
-from ai_client import get_response
+# Assuming ai_client is imported implicitly or not needed here
 from ai_worker import AIWorker 
 
 class ProgressCircle(QWidget):
@@ -90,9 +90,16 @@ class DashboardWindow(QWidget):
             }
         ]
         
+        # QThreadPool is no longer used for AI calls, but kept if needed later
         self.threadpool = QThreadPool() 
-        self.init_ui()
+        
+        # New attribute to prevent the AIWorker from being garbage collected
+        self._current_worker = None
+        
+        # 🎯 FIX: The method call that was causing the AttributeError
+        self.init_ui() 
 
+    # 🎯 FIX: The method definition was missing or misplaced
     def init_ui(self):
         self.setWindowTitle("Secure Learning Chatbox - Dashboard")
         self.setFixedSize(1000, 600)
@@ -134,7 +141,6 @@ class DashboardWindow(QWidget):
 
         # Lesson selector buttons
         lessons_layout = QHBoxLayout()
-        # 🛠️ ADJUSTED SPACING: Reduced from 16 to 10
         lessons_layout.setSpacing(10) 
         semi_border = "rgba(11,61,145,0.55)"
 
@@ -164,7 +170,6 @@ class DashboardWindow(QWidget):
 
             lbl = QLabel(lesson["title"])
             lbl.setAlignment(Qt.AlignCenter)
-            # 🛠️ ADJUSTED MARGIN: Reduced top margin from 5px to 1px
             lbl.setStyleSheet(f"font-size:10px; color:{primary_text_color}; margin:1px 5px;")
             v.addWidget(lbl)
 
@@ -193,7 +198,7 @@ class DashboardWindow(QWidget):
         self.chat_display.setStyleSheet("background:white; color:#0b3d91; border-radius:8px; padding:8px;")
         right_layout.addWidget(self.chat_display)
 
-        # 🟢 NEW: Spinner for the Dashboard Quick Chat
+        # Spinner for the Dashboard Quick Chat
         self.spinner = QLabel()
         self.spinner.setAlignment(Qt.AlignCenter)
         try:
@@ -238,18 +243,27 @@ class DashboardWindow(QWidget):
         self.chat_display.append(f"<b>You:</b> {text}\n")
         self.quick_input.clear()
         
-        # 🟢 Show the spinner instead of "AI is thinking..."
+        # Show the spinner
         self.spinner.show()
         QApplication.processEvents()
 
         worker = AIWorker(text)
         worker.signals.finished.connect(self._display_quick_reply)
         worker.signals.error.connect(lambda r: self._display_quick_reply(r))
-        self.threadpool.start(worker)
+        
+        # Keep a reference to prevent garbage collection while the thread runs
+        self._current_worker = worker 
+        
+        worker.run() # 🎯 RUN THE WORKER IN A NEW THREAD
 
     # -------------------- FIXED STREAMING --------------------
     def _display_quick_reply(self, reply_text: Optional[str]):
-        # 🟢 Hide the spinner now that the response is ready to stream
+        # Clear the worker reference once done
+        if self._current_worker:
+            del self._current_worker
+            self._current_worker = None
+        
+        # Hide the spinner
         self.spinner.hide()
         
         self.chat_display.append("<b>AI:</b> ")
@@ -264,6 +278,10 @@ class DashboardWindow(QWidget):
         chunk = 35
         idx = 0
 
+        # Note: We must explicitly cast to QScrollBar if the linter complains
+        # about `verticalScrollBar()`, though it usually works fine implicitly.
+        vertical_scroll_bar: QScrollBar = self.chat_display.verticalScrollBar()
+
         def step():
             nonlocal idx
             if idx >= len(reply_text):
@@ -277,9 +295,7 @@ class DashboardWindow(QWidget):
             cur.movePosition(QTextCursor.MoveOperation.End) 
             cur.insertText(piece)
 
-            self.chat_display.verticalScrollBar().setValue(
-                self.chat_display.verticalScrollBar().maximum()
-            )
+            vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
 
             idx = end
             QTimer.singleShot(25, step)
@@ -288,7 +304,9 @@ class DashboardWindow(QWidget):
 
     # -------------------- LESSON WINDOWS --------------------
     def open_lesson_window(self, idx):
-        from lesson_window import LessonWindow
+        # NOTE: Make sure lesson_window.py is in the same directory and LessonWindow 
+        # is correctly implemented using the threading fix.
+        from lesson_window import LessonWindow 
         win = LessonWindow(self.lessons[idx])
         win.show()
 

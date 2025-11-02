@@ -1,11 +1,12 @@
 import threading
 from typing import Optional
 from PySide6.QtWidgets import (
+    # 🎯 FIX: Ensure QWidget and other classes are imported
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTextEdit, QFrame, QApplication
+    QTextEdit, QFrame, QApplication, QScrollBar
 )
 from PySide6.QtCore import Qt, QEvent, QTimer, QThreadPool
-from PySide6.QtGui import QMovie, QTextCursor # QMovie is correctly imported
+from PySide6.QtGui import QMovie, QTextCursor 
 from ai_worker import AIWorker
 
 class LessonWindow(QWidget):
@@ -15,8 +16,14 @@ class LessonWindow(QWidget):
         self.setWindowTitle(self.lesson.get("title", "Lesson"))
         self.setFixedSize(640, 640)
         self.setStyleSheet("background-color: #e6e6e6;")
+        
+        # QThreadPool is no longer used for AI calls, but kept if needed later
         self.threadpool = QThreadPool()
         self.challenge_printed = False 
+        
+        # New attribute to hold the worker reference
+        self._current_worker = None 
+        
         self._build_ui()
 
     def _build_ui(self):
@@ -45,7 +52,7 @@ class LessonWindow(QWidget):
         self.chat_display.setStyleSheet("background-color: white; color: #0b3d91; border-radius: 8px; padding: 8px; font-size: 14px;")
         chat_lay.addWidget(self.chat_display, stretch=3)
 
-        # 🟢 Spinner Initialization (Updated for QMovie)
+        # Spinner Initialization (Updated for QMovie)
         self.spinner = QLabel()
         self.spinner.setAlignment(Qt.AlignCenter)
         try:
@@ -140,10 +147,19 @@ class LessonWindow(QWidget):
         worker = AIWorker(prompt)
         worker.signals.finished.connect(self._display_incremental)
         worker.signals.error.connect(lambda r: self._display_incremental(r))
-        self.threadpool.start(worker)
+        
+        # Keep a reference to prevent garbage collection while the thread runs
+        self._current_worker = worker 
+        
+        worker.run() # 🎯 RUN THE WORKER IN A NEW THREAD
 
     # ------------------------------------------------------------------
     def _display_incremental(self, full_text: Optional[str], chunk: int = 40, delay: int = 30):
+        # Clear the worker reference once done
+        if self._current_worker:
+            del self._current_worker
+            self._current_worker = None
+            
         self.spinner.hide() # Hide the spinner when the thread returns
         
         if full_text is None:
@@ -151,6 +167,8 @@ class LessonWindow(QWidget):
             return
 
         idx = 0
+        vertical_scroll_bar: QScrollBar = self.chat_display.verticalScrollBar()
+
         def step():
             nonlocal idx
             if idx >= len(full_text):
@@ -169,7 +187,7 @@ class LessonWindow(QWidget):
             cur = self.chat_display.textCursor()
             cur.movePosition(QTextCursor.MoveOperation.End) 
             cur.insertText(piece)
-            self.chat_display.verticalScrollBar().setValue(self.chat_display.verticalScrollBar().maximum())
+            vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
             idx = end
             QTimer.singleShot(delay, step)
 
