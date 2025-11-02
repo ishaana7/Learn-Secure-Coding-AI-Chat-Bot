@@ -1,97 +1,64 @@
 import os
-import json
 import requests
 from typing import Optional
+from dotenv import load_dotenv
 
-# ===========================================================
-# CONFIG
-# ===========================================================
-AI_PROVIDER = os.environ.get("AI_PROVIDER", "ollama").lower()
+load_dotenv()
 
-# Ollama settings
-OLLAMA_API_URL = "http://localhost:11434/api/generate"  # Default local Ollama endpoint
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")  # Default model
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# ===========================================================
-# SETTERS
-# ===========================================================
-def set_model(model: str):
-    """Set the Ollama model at runtime (e.g., 'llama3.2', 'mistral')."""
-    global OLLAMA_MODEL
-    OLLAMA_MODEL = model
+# WARNING: gemini-2.0-flash-exp is deprecated. 
+# It might be safer to switch to "gemini-2.5-flash" if issues persist.
+GEMINI_MODEL = "gemini-2.0-flash-exp" 
 
-def set_url(url: str):
-    """Set the Ollama API URL at runtime (useful for non-standard ports)."""
-    global OLLAMA_API_URL
-    OLLAMA_API_URL = url
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
-def set_api_key(key: str = None):
-    """No-op for compatibility with PyQt app; Ollama doesn't need an API key."""
-    pass  # Ollama runs locally, so no API key is required
+DEFAULT_TIMEOUT = 30
 
-# ===========================================================
-# CALLERS
-# ===========================================================
-def _call_ollama(prompt: str, model: Optional[str] = None) -> str:
-    """Make a request to the local Ollama API."""
-    url = OLLAMA_API_URL
-    model = model or OLLAMA_MODEL
 
-    if not model:
-        return "No model specified. Set OLLAMA_MODEL in environment or use set_model()."
+def get_response(prompt: str, timeout: int = DEFAULT_TIMEOUT) -> Optional[str]:
+    """
+    Sends a prompt to the Gemini API and returns the response text.
+    Includes robust error detection and logging.
+    """
+    if not GEMINI_API_KEY:
+        print("API ERROR: GEMINI_API_KEY is not set. Check your .env file.")
+        return None
 
-    headers = {
-        "Content-Type": "application/json",
-    }
-
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,  # Non-streaming for PyQt compatibility
-        "options": {
-            "temperature": 0.7,
-            "max_tokens": 512,
-        }
-    }
-
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-        
-        if "response" in data:
-            return data["response"].strip()
-        
-        return "Unexpected response format from Ollama."
-    except requests.exceptions.ConnectionError:
-        return "Failed to connect to Ollama. Ensure 'ollama serve' is running."
-    except requests.exceptions.HTTPError as e:
-        return f"Ollama API error: {e.response.status_code} - {e.response.text}"
-    except Exception as e:
-        return f"Ollama request failed: {str(e)}. Ensure model '{model}' is pulled (run 'ollama pull {model}')."
-
-# ===========================================================
-# PUBLIC API
-# ===========================================================
-def get_response(prompt: str, model: Optional[str] = None) -> str:
-    """Unified response function for Ollama, compatible with PyQt app."""
-    if not prompt:
+    if not prompt.strip():
         return ""
 
-    if AI_PROVIDER == "ollama":
-        return _call_ollama(prompt, model=model)
-    else:
-        return "Only Ollama provider is supported in this version."
+    url = f"{GEMINI_URL}?key={GEMINI_API_KEY}"
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
-# ===========================================================
-# BACKWARD COMPATIBILITY ALIAS
-# ===========================================================
-ai_gemma = get_response
+    try:
+        resp = requests.post(url, json=payload, timeout=timeout)
+        resp.raise_for_status() # Raises an exception for 4xx/5xx status codes
+        
+        data = resp.json()
 
-# ===========================================================
-# MANUAL TEST (Optional)
-# ===========================================================
-if __name__ == "__main__":
-    print("🔍 Testing Ollama connection...")
-    response = get_response("Hello Ollama, are you online?")
-    print(response)
+        try:
+            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except (KeyError, IndexError, TypeError):
+            print("Bad response format or content blocked. Full response data:")
+            print(data)
+            return ""
+
+    except requests.exceptions.HTTPError as e:
+        print(f"API HTTP ERROR: {e}")
+        print(f"Status Code: {e.response.status_code}. Response Text: {e.response.text[:150]}...")
+        if e.response.status_code == 400:
+             print("HINT: A 400 error often means an invalid API key, model name, or malformed request.")
+        return None
+        
+    except requests.exceptions.Timeout as e:
+        print(f"API TIMEOUT ERROR: Request timed out after {timeout} seconds.")
+        return None
+        
+    except requests.exceptions.RequestException as e:
+        print(f"API CONNECTION/REQUEST ERROR: {type(e).__name__}: {e}")
+        return None
+
+    except Exception as e:
+        print(f"API UNEXPECTED ERROR: {type(e).__name__}: {e}")
+        return None

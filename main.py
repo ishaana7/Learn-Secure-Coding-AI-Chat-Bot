@@ -1,21 +1,14 @@
 # login.py
 import sys
-from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton
-)
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton
 from PySide6.QtCore import Qt
-from dashboard import DashboardWindow  # <-- this file
+from dashboard import DashboardWindow
 
 class LoginWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.init_ui()
-
-    def init_ui(self):
         self.setWindowTitle("Secure Learning Chatbox")
         self.setFixedSize(300, 200)
-
         layout = QVBoxLayout()
 
         title = QLabel("Login")
@@ -45,19 +38,13 @@ class LoginWindow(QWidget):
         login_btn = QPushButton("Login")
         login_btn.clicked.connect(self.handle_login)
         layout.addWidget(login_btn)
-
         self.setLayout(layout)
 
     def handle_login(self):
-        username = self.username_input.text()
-        password = self.password_input.text()
-        if username and password:
-            print(f"Login successful for user: {username}")
+        if self.username_input.text() and self.password_input.text():
             self.hide()
             self.dashboard = DashboardWindow()
             self.dashboard.show()
-        else:
-            print("Please enter both username and password")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
